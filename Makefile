@@ -2,6 +2,10 @@
 #
 # Generated on 2026-02-06T17:08:51Z by kres f3ab59e.
 
+EMPTY :=
+COMMA := ,
+SPACE := $(EMPTY) $(EMPTY)
+
 # common variables
 
 SHA := $(shell git describe --match=none --always --abbrev=8 --dirty)
@@ -42,7 +46,8 @@ CONFORMANCE_IMAGE ?= ghcr.io/siderolabs/conform:latest
 # docker build settings
 
 BUILD := docker buildx build
-PLATFORM ?= linux/amd64
+PLATFORM ?= linux/amd64,linux/arm64
+PLATFORMS := $(subst $(COMMA),$(SPACE),$(PLATFORM))
 PROGRESS ?= auto
 PUSH ?= false
 CI_ARGS ?=
@@ -210,15 +215,15 @@ unit-tests:  ## Performs unit tests
 unit-tests-race:  ## Performs unit tests with race detection enabled.
 	@$(MAKE) target-$@
 
-.PHONY: $(ARTIFACTS)/kms-server-linux-amd64
-$(ARTIFACTS)/kms-server-linux-amd64:
-	@$(MAKE) local-kms-server-linux-amd64 DEST=$(ARTIFACTS)
+.PHONY: $(ARTIFACTS)/kms-server-linux-amd64 $(ARTIFACTS)/kms-server-linux-arm64
+$(ARTIFACTS)/kms-server-linux-%:
+	@$(MAKE) local-kms-server-linux DEST=$(ARTIFACTS)
 
-.PHONY: kms-server-linux-amd64
-kms-server-linux-amd64: $(ARTIFACTS)/kms-server-linux-amd64  ## Builds executable for kms-server-linux-amd64.
+.PHONY: kms-server-linux-amd64 kms-server-linux-arm64
+kms-server-linux-%: $(ARTIFACTS)/kms-server-linux-%  ## Builds executable for kms-server-linux-%.
 
 .PHONY: kms-server
-kms-server: kms-server-linux-amd64  ## Builds executables for kms-server.
+kms-server: $(patsubst linux/%,kms-server-linux-%,$(PLATFORMS))  ## Builds executables for kms-server.
 
 .PHONY: lint-markdown
 lint-markdown:  ## Runs markdownlint.

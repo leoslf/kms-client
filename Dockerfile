@@ -135,21 +135,25 @@ COPY --from=lint-golangci-lint-fmt-run /src .
 FROM scratch AS unit-tests
 COPY --from=unit-tests-run /src/coverage.txt /coverage-unit-tests.txt
 
-# builds kms-server-linux-amd64
-FROM base AS kms-server-linux-amd64-build
+# builds kms-server-linux-${TARGETARCH}
+FROM base AS kms-server-linux-build
 COPY --from=generate / /
 WORKDIR /src/cmd/kms-server
+ARG TARGETARCH
 ARG GO_BUILDFLAGS
 ARG GO_LDFLAGS
-RUN --mount=type=cache,target=/root/.cache/go-build,id=kms-client/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=kms-client/go/pkg go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS}" -o /kms-server-linux-amd64
+RUN --mount=type=cache,target=/root/.cache/go-build,id=kms-client/root/.cache/go-build --mount=type=cache,target=/go/pkg,id=kms-client/go/pkg go build ${GO_BUILDFLAGS} -ldflags "${GO_LDFLAGS}" -o /kms-server-linux-${TARGETARCH}
 
-FROM scratch AS kms-server-linux-amd64
-COPY --from=kms-server-linux-amd64-build /kms-server-linux-amd64 /kms-server-linux-amd64
+FROM scratch AS kms-server-linux
+ARG TARGETARCH
+COPY --from=kms-server-linux-build /kms-server-linux-${TARGETARCH} /kms-server-linux-${TARGETARCH}
 
-FROM kms-server-linux-${TARGETARCH} AS kms-server
+ARG TARGETARCH
+FROM kms-server-linux AS kms-server
 
 FROM scratch AS kms-server-all
-COPY --from=kms-server-linux-amd64 / /
+ARG TARGETARCH
+COPY --from=kms-server-linux / /
 
 FROM scratch AS image-kms-server
 ARG TARGETARCH
